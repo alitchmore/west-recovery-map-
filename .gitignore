@@ -1,0 +1,12 @@
+# Backend
+backend/vendor
+backend/storage
+backend/.env
+
+# Frontend
+frontend/node_modules
+frontend/dist
+frontend/.env
+
+# Temp Lovable clone
+.lovable-frontend-tmp
