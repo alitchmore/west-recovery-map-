@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { fetchCommunitySummaries, CommunitySummary } from "@/api/client";
 import { JamaicaMap } from "@/components/JamaicaMap";
 import { StatisticsOverview } from "@/components/StatisticsOverview";
+import { MapSkeleton } from "@/components/MapSkeleton";
+import { StatisticsSkeleton } from "@/components/StatisticsSkeleton";
+import { CommunityDetailDialog } from "@/components/CommunityDetailDialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -12,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { MapPin, FileText, LayoutDashboard, AlertTriangle } from "lucide-react";
 
-const PARISHES = ["", "Hanover", "Westmoreland", "St James", "St Elizabeth"];
+const PARISHES = ["all", "Hanover", "Westmoreland", "St James", "St Elizabeth"];
 
 interface IndexProps {
   onNavigate: (view: "public" | "admin") => void;
@@ -22,13 +26,17 @@ const Index = ({ onNavigate }: IndexProps) => {
   const [communities, setCommunities] = useState<CommunitySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedParish, setSelectedParish] = useState<string>("");
+  const [selectedParish, setSelectedParish] = useState<string>("all");
+  const [selectedSeverities, setSelectedSeverities] = useState<Set<"severe" | "moderate" | "low">>(
+    new Set(["severe", "moderate", "low"])
+  );
+  const [selectedCommunity, setSelectedCommunity] = useState<CommunitySummary | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const data = await fetchCommunitySummaries(selectedParish || undefined);
+        const data = await fetchCommunitySummaries(selectedParish === "all" ? undefined : selectedParish);
         setCommunities(data);
         setError(null);
       } catch (err) {
@@ -40,6 +48,30 @@ const Index = ({ onNavigate }: IndexProps) => {
 
     loadData();
   }, [selectedParish]);
+
+  const toggleSeverity = (severity: "severe" | "moderate" | "low") => {
+    setSelectedSeverities(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(severity)) {
+        newSet.delete(severity);
+      } else {
+        newSet.add(severity);
+      }
+      return newSet;
+    });
+  };
+
+  const filteredCommunities = useMemo(() => {
+    return communities.filter(c => selectedSeverities.has(c.severity));
+  }, [communities, selectedSeverities]);
+
+  const severityCounts = useMemo(() => {
+    return {
+      severe: communities.filter(c => c.severity === "severe").length,
+      moderate: communities.filter(c => c.severity === "moderate").length,
+      low: communities.filter(c => c.severity === "low").length,
+    };
+  }, [communities]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -77,42 +109,76 @@ const Index = ({ onNavigate }: IndexProps) => {
       {/* Map Section */}
       <section className="container mx-auto px-4 py-12 md:py-16">
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-                <MapPin className="h-6 w-6 text-primary" />
-                Interactive Damage Map
-              </h2>
-              <p className="text-muted-foreground mt-1">
-                Click markers to view community details and severity
-              </p>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+                  <MapPin className="h-6 w-6 text-primary" />
+                  Interactive Damage Map
+                </h2>
+                <p className="text-muted-foreground mt-1">
+                  Click markers to view community details and severity
+                </p>
+              </div>
+              
+              <Select value={selectedParish} onValueChange={setSelectedParish}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="All Parishes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Parishes</SelectItem>
+                  {PARISHES.slice(1).map((parish) => (
+                    <SelectItem key={parish} value={parish}>
+                      {parish}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            
-            <Select value={selectedParish} onValueChange={setSelectedParish}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="All Parishes" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Parishes</SelectItem>
-                {PARISHES.slice(1).map((parish) => (
-                  <SelectItem key={parish} value={parish}>
-                    {parish}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+            {/* Severity Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">Filter by severity:</span>
+              <Badge
+                variant={selectedSeverities.has("severe") ? "destructive" : "outline"}
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => toggleSeverity("severe")}
+              >
+                Severe ({severityCounts.severe})
+              </Badge>
+              <Badge
+                variant={selectedSeverities.has("moderate") ? "default" : "outline"}
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => toggleSeverity("moderate")}
+              >
+                Moderate ({severityCounts.moderate})
+              </Badge>
+              <Badge
+                variant={selectedSeverities.has("low") ? "secondary" : "outline"}
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => toggleSeverity("low")}
+              >
+                Low ({severityCounts.low})
+              </Badge>
+            </div>
           </div>
 
           {loading ? (
-            <div className="w-full h-[60vh] md:h-[70vh] rounded-lg border border-border bg-muted/20 flex items-center justify-center">
-              <p className="text-muted-foreground">Loading map data...</p>
-            </div>
+            <MapSkeleton />
           ) : error ? (
             <div className="w-full h-[60vh] md:h-[70vh] rounded-lg border border-destructive bg-destructive/5 flex items-center justify-center">
               <p className="text-destructive">{error}</p>
             </div>
+          ) : filteredCommunities.length === 0 ? (
+            <div className="w-full h-[60vh] md:h-[70vh] rounded-lg border border-border bg-muted/20 flex items-center justify-center">
+              <p className="text-muted-foreground">No communities match the selected filters</p>
+            </div>
           ) : (
-            <JamaicaMap communities={communities} selectedParish={selectedParish} />
+            <JamaicaMap 
+              communities={filteredCommunities} 
+              selectedParish={selectedParish}
+              onCommunityClick={setSelectedCommunity}
+            />
           )}
         </div>
       </section>
@@ -129,7 +195,7 @@ const Index = ({ onNavigate }: IndexProps) => {
             </div>
             
             {loading ? (
-              <p className="text-center text-muted-foreground">Loading statistics...</p>
+              <StatisticsSkeleton />
             ) : error ? (
               <p className="text-center text-destructive">{error}</p>
             ) : (
@@ -172,6 +238,13 @@ const Index = ({ onNavigate }: IndexProps) => {
           </div>
         </div>
       </section>
+
+      {/* Community Detail Dialog */}
+      <CommunityDetailDialog
+        community={selectedCommunity}
+        open={!!selectedCommunity}
+        onOpenChange={(open) => !open && setSelectedCommunity(null)}
+      />
     </div>
   );
 };

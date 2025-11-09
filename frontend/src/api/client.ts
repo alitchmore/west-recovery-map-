@@ -1,6 +1,8 @@
 // API client for West Recovery Map backend
+import { MOCK_COMMUNITIES } from "./mockData";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const USE_MOCK_DATA = !import.meta.env.VITE_API_BASE_URL;
 
 // Types
 export type RoadAccess = "clear" | "partial" | "foot_or_bike_only" | "blocked";
@@ -82,10 +84,24 @@ export async function submitReport(payload: ReportPayload): Promise<any> {
 
 // Fetch community summaries for admin dashboard
 export async function fetchCommunitySummaries(parish?: string): Promise<CommunitySummary[]> {
-  const url = new URL(`${API_BASE_URL}/admin/communities/summary`);
-  if (parish) {
-    url.searchParams.append("parish", parish);
+  // Use mock data if no API URL is configured
+  if (USE_MOCK_DATA) {
+    console.warn("⚠️ Using mock data - Set VITE_API_BASE_URL environment variable to connect to backend");
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+    const filtered = parish ? MOCK_COMMUNITIES.filter(c => c.parish === parish) : MOCK_COMMUNITIES;
+    return Promise.resolve(filtered);
   }
-  const response = await fetch(url.toString());
-  return handleResponse(response);
+
+  try {
+    const url = new URL(`${API_BASE_URL}/admin/communities/summary`);
+    if (parish) {
+      url.searchParams.append("parish", parish);
+    }
+    const response = await fetch(url.toString());
+    return handleResponse(response);
+  } catch (error) {
+    console.warn("⚠️ API error - falling back to mock data:", error);
+    const filtered = parish ? MOCK_COMMUNITIES.filter(c => c.parish === parish) : MOCK_COMMUNITIES;
+    return Promise.resolve(filtered);
+  }
 }

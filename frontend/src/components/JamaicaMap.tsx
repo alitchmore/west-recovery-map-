@@ -7,6 +7,7 @@ import { MapLegend } from "./MapLegend";
 interface JamaicaMapProps {
   communities: CommunitySummary[];
   selectedParish?: string;
+  onCommunityClick?: (community: CommunitySummary) => void;
 }
 
 const JAMAICA_CENTER: [number, number] = [18.1096, -77.2975];
@@ -41,7 +42,7 @@ function MapUpdater({ communities }: { communities: CommunitySummary[] }) {
   return null;
 }
 
-export function JamaicaMap({ communities, selectedParish }: JamaicaMapProps) {
+export function JamaicaMap({ communities, selectedParish, onCommunityClick }: JamaicaMapProps) {
   const filteredCommunities = selectedParish
     ? communities.filter((c) => c.parish === selectedParish)
     : communities;
@@ -77,6 +78,9 @@ export function JamaicaMap({ communities, selectedParish }: JamaicaMapProps) {
               opacity: 0.8,
               fillOpacity: 0.6,
             }}
+            eventHandlers={{
+              click: () => onCommunityClick?.(community),
+            }}
           >
             <Popup>
               <div className="text-sm">
@@ -110,6 +114,12 @@ export function JamaicaMap({ communities, selectedParish }: JamaicaMapProps) {
                     </p>
                   )}
                 </div>
+                <button
+                  onClick={() => onCommunityClick?.(community)}
+                  className="mt-3 w-full px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded hover:bg-primary/90 transition-colors"
+                >
+                  View Full Details
+                </button>
               </div>
             </Popup>
           </CircleMarker>
