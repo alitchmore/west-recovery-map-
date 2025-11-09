@@ -1,73 +1,210 @@
-# Welcome to your Lovable project
+# West Recovery Map – Frontend
 
-## Project info
+React frontend for the **West Recovery Map** project.
 
-**URL**: https://lovable.dev/projects/87391c73-fd93-40fe-95e6-be7e11727439
+This app provides:
 
-## How can I edit this code?
+- A **public, mobile-friendly form** so community members / leaders can submit reports.
+- An **admin dashboard** (table + later map) for planners and responders, backed by the API.
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## Tech Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/87391c73-fd93-40fe-95e6-be7e11727439) and start prompting.
+- **Build tool:** Vite
+- **Framework:** React
+- **Language:** TypeScript
+- **HTTP:** Fetch API (or Axios if you prefer)
+- **Styling:** Plain CSS / utility classes (e.g., Tailwind) – examples use utility-style classes
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 1. Prerequisites
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Node.js 18+ (Node 20 is fine)
+- npm or yarn
 
-Follow these steps:
+### 2. Install dependencies
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+From the project root:
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+```bash
+cd frontend
+npm install
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 3. Environment variables
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Create a `.env` file in `frontend/`:
+
+```env
+VITE_API_BASE_URL=http://localhost:8000/api
+```
+
+For production, update this to your deployed API base URL.
+
+### 4. Run the dev server
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Open the app:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- `http://localhost:5173` (default Vite port)
 
-**Use GitHub Codespaces**
+---
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Project Structure
 
-## What technologies are used for this project?
+Recommended structure:
 
-This project is built with:
+```text
+frontend/
+  src/
+    api/
+      client.ts             # API base + helper functions
+    components/
+      ReportForm.tsx        # Public report form
+      CommunityTable.tsx    # (optional) table for admin view
+    pages/
+      PublicReportPage.tsx  # Wraps the form
+      AdminDashboardPage.tsx# Uses community summaries
+    App.tsx                 # Simple view switch or Router
+    main.tsx
+  index.html
+  package.json
+  vite.config.ts
+  README.md
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
+## API Integration
 
-Simply open [Lovable](https://lovable.dev/projects/87391c73-fd93-40fe-95e6-be7e11727439) and click on Share -> Publish.
+The frontend talks to the Laravel backend via the `VITE_API_BASE_URL` env var.
 
-## Can I connect a custom domain to my Lovable project?
+### Base client
 
-Yes, you can!
+`src/api/client.ts` defines:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- `submitReport(payload: ReportPayload)`
+  → calls `POST ${VITE_API_BASE_URL}/reports`
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- `fetchCommunitySummaries(parish?: string)`
+  → calls `GET ${VITE_API_BASE_URL}/admin/communities/summary`
+
+**Example:**
+
+```ts
+// src/api/client.ts
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+
+export async function submitReport(payload: ReportPayload) {
+  const res = await fetch(`${API_BASE_URL}/reports`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || "Failed to submit report");
+  }
+
+  return res.json();
+}
+```
+
+---
+
+## Pages
+
+### Public Report Page
+
+- Component: `PublicReportPage`
+- Contains `ReportForm` which:
+  - Captures parish, community, landmark, access & utility status, etc.
+  - Posts to `POST /api/reports`.
+  - Shows a simple success/error message.
+
+### Admin Dashboard Page
+
+- Component: `AdminDashboardPage`
+- Uses `fetchCommunitySummaries` to render:
+  - A simple table of communities with:
+    - Parish
+    - Community name
+    - Severity level (`low` / `moderate` / `severe`)
+    - Flags (no water, no light, limited access)
+    - # of severe houses
+    - # of reports
+- Later, you can add:
+  - A map view (Leaflet/Mapbox/Google Maps).
+  - Filters and sorting.
+  - Drill-down into a single community.
+
+---
+
+## Running with the Backend
+
+Assuming the main project layout:
+
+```text
+west-recovery-map/
+  backend/
+  frontend/
+```
+
+### Backend
+
+```bash
+cd backend
+cp .env.example .env
+# configure DB values
+composer install
+php artisan key:generate
+php artisan migrate
+php artisan serve   # http://localhost:8000
+```
+
+### Frontend
+
+```bash
+cd ../frontend
+npm install
+echo "VITE_API_BASE_URL=http://localhost:8000/api" > .env
+npm run dev   # http://localhost:5173
+```
+
+The public form will now submit reports directly to the local API.
+
+---
+
+## Scripts
+
+From the `frontend/` directory:
+
+- `npm run dev` – start Vite dev server
+- `npm run build` – build production assets
+- `npm run preview` – preview the production build locally
+
+---
+
+## TODO / Next Steps
+
+- Add a proper **router** (React Router) for:
+  - `/` → Public report
+  - `/admin` → Admin dashboard
+- Add **auth** for admin:
+  - Login page that stores a token
+  - Use token in `fetchCommunitySummaries` requests
+- Add a **map view** (Leaflet or similar) on the admin dashboard:
+  - Colour markers by `severity`
+- Improve UI/UX:
+  - Validation messages
+  - Mobile-friendly layout
+  - Parish/community pickers with suggestions
+
