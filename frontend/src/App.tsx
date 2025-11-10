@@ -8,6 +8,7 @@ import PublicReportPage from "./pages/PublicReportPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import { Button } from "./components/ui/button";
 
+// React 19 upgrade - rebuild trigger
 const queryClient = new QueryClient();
 
 const App = () => {

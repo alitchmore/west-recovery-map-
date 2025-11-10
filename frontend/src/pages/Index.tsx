@@ -176,7 +176,7 @@ const Index = ({ onNavigate }: IndexProps) => {
           ) : (
             <JamaicaMap 
               communities={filteredCommunities} 
-              selectedParish={selectedParish}
+              selectedParish={selectedParish === "all" ? undefined : selectedParish}
               onCommunityClick={setSelectedCommunity}
             />
           )}
@@ -243,7 +243,9 @@ const Index = ({ onNavigate }: IndexProps) => {
       <CommunityDetailDialog
         community={selectedCommunity}
         open={!!selectedCommunity}
-        onOpenChange={(open) => !open && setSelectedCommunity(null)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedCommunity(null);
+        }}
       />
     </div>
   );

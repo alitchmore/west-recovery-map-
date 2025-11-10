@@ -43,12 +43,11 @@ export const CommunityDetailDialog = ({
   open,
   onOpenChange,
 }: CommunityDetailDialogProps) => {
-  if (!community) return null;
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+    <Dialog open={open && !!community} onOpenChange={onOpenChange}>
+      {community && (
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <DialogTitle className="text-2xl flex items-center gap-2">
@@ -194,7 +193,8 @@ export const CommunityDetailDialog = ({
             </div>
           )}
         </div>
-      </DialogContent>
+        </DialogContent>
+      )}
     </Dialog>
   );
 };
